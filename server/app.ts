@@ -23,11 +23,15 @@ export function createApp() {
   // app.use('/api/projects', projectsRouter);
   // app.use('/api/jobs', jobsRouter);
 
-  // Serve built frontend
-  app.use(express.static(clientDir));
+  // Landing page at root
+  const landingPage = resolve(import.meta.dirname, '..', '..', 'home.html');
+  app.get('/', (_req, res) => {
+    res.sendFile(landingPage);
+  });
 
-  // SPA catch-all: serve index.html for any non-API route
-  app.get('*', (_req, res) => {
+  // Serve built React app under /app
+  app.use('/app', express.static(clientDir));
+  app.get('/app/*', (_req, res) => {
     res.sendFile(join(clientDir, 'index.html'));
   });
 
