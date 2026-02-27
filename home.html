@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDocs — Turn Videos into Step-by-Step Guides</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --ink: #1a1612;
+      --ink-soft: #3d3530;
+      --cream: #faf6f1;
+      --cream-dark: #f0e9df;
+      --amber: #d4880f;
+      --amber-light: #f0b442;
+      --amber-glow: #d4880f22;
+      --copper: #b8652a;
+      --sage: #7a8b6f;
+      --sage-light: #e8ede5;
+      --slate: #64605b;
+      --warm-white: #fffcf8;
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-body: 'Outfit', system-ui, sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--ink);
+      background: var(--cream);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Grain overlay ---- */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px;
+    }
+
+    /* ---- Reveal animations ---- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.8s cubic-bezier(0.23, 1, 0.32, 1),
+                  transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* ---- Nav ---- */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1.25rem 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(250, 246, 241, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(26, 22, 18, 0.06);
+      transition: all 0.3s ease;
+    }
+    nav.scrolled {
+      padding: 0.8rem 3rem;
+      box-shadow: 0 2px 24px rgba(26, 22, 18, 0.06);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: var(--ink);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span {
+      color: var(--amber);
+    }
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--slate);
+      text-decoration: none;
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
+    }
+    .nav-links a:hover {
+      color: var(--amber);
+    }
+    .nav-cta {
+      padding: 0.6rem 1.5rem;
+      background: var(--ink);
+      color: var(--cream) !important;
+      border-radius: 100px;
+      font-weight: 600 !important;
+      transition: background 0.2s, transform 0.2s !important;
+    }
+    .nav-cta:hover {
+      background: var(--ink-soft) !important;
+      color: var(--cream) !important;
+      transform: translateY(-1px);
+    }
+
+    /* ---- Hero ---- */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 8rem 2rem 6rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--amber-glow) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -10%;
+      left: -5%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(122, 139, 111, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 10s ease-in-out infinite reverse;
+    }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(20px, -30px) scale(1.05); }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1.2rem;
+      background: var(--sage-light);
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--sage);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--sage);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.4); }
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 6vw, 5.2rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      max-width: 820px;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--amber);
+      position: relative;
+    }
+    .hero h1 em::after {
+      content: '';
+      position: absolute;
+      bottom: 0.05em;
+      left: -2%;
+      right: -2%;
+      height: 0.12em;
+      background: var(--amber-light);
+      opacity: 0.35;
+      border-radius: 4px;
+    }
+    .hero-sub {
+      font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+      color: var(--slate);
+      max-width: 560px;
+      line-height: 1.65;
+      font-weight: 400;
+      margin-bottom: 2.5rem;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 2rem;
+      border-radius: 100px;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: var(--cream);
+      box-shadow: 0 4px 24px rgba(26, 22, 18, 0.15);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(26, 22, 18, 0.2);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid rgba(26, 22, 18, 0.2);
+    }
+    .btn-secondary:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+      transform: translateY(-2px);
+    }
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .hero-visual {
+      margin-top: 4rem;
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+    }
+    .hero-visual-card {
+      background: var(--warm-white);
+      border: 1px solid rgba(26, 22, 18, 0.08);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 24px 80px rgba(26, 22, 18, 0.08), 0 4px 16px rgba(26, 22, 18, 0.04);
+      position: relative;
+    }
+    .transformation-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .flow-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .flow-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      position: relative;
+    }
+    .flow-icon.video {
+      background: linear-gradient(135deg, #e8ddd3, #d9cdbf);
+      color: var(--ink-soft);
+    }
+    .flow-icon.magic {
+      background: linear-gradient(135deg, var(--amber-light), var(--amber));
+      color: white;
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(212, 136, 15, 0.2); }
+      50% { box-shadow: 0 0 24px 4px rgba(212, 136, 15, 0.15); }
+    }
+    .flow-icon.docs {
+      background: linear-gradient(135deg, var(--sage-light), #c8d5c0);
+      color: var(--sage);
+    }
+    .flow-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--slate);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .flow-arrow {
+      font-size: 1.5rem;
+      color: var(--amber);
+      animation: arrow-move 2s ease-in-out infinite;
+    }
+    @keyframes arrow-move {
+      0%, 100% { transform: translateX(0); opacity: 0.6; }
+      50% { transform: translateX(6px); opacity: 1; }
+    }
+
+    /* ---- Section container ---- */
+    section {
+      padding: 7rem 2rem;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--amber);
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 1rem;
+    }
+    .section-desc {
+      font-size: 1.1rem;
+      line-height: 1.65;
+      color: var(--slate);
+      max-width: 580px;
+    }
+
+    /* ---- How It Works ---- */
+    .how-it-works {
+      background: var(--warm-white);
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 4rem;
+    }
+    .step-card {
+      padding: 2.5rem 2rem;
+      border-radius: 20px;
+      border: 1px solid rgba(26, 22, 18, 0.06);
+      background: var(--cream);
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .step-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(26, 22, 18, 0.06);
+      border-color: rgba(212, 136, 15, 0.2);
+    }
+    .step-number {
+      font-family: var(--font-display);
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--cream-dark);
+      line-height: 1;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s;
+    }
+    .step-card:hover .step-number {
+      color: var(--amber-light);
+    }
+    .step-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .step-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .step-card:nth-child(1) .step-icon { background: #f0e6d9; }
+    .step-card:nth-child(2) .step-icon { background: #fef0d5; }
+    .step-card:nth-child(3) .step-icon { background: var(--sage-light); }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .step-desc {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: var(--slate);
+      margin-top: 0.75rem;
+    }
+
+    /* ---- Features ---- */
+    .features {
+      background: var(--ink);
+      color: var(--cream);
+      position: relative;
+      overflow: hidden;
+    }
+    .features::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      right: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(212, 136, 15, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .features .section-title { color: var(--cream); }
+    .features .section-desc { color: rgba(250, 246, 241, 0.6); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-top: 4rem;
+    }
+    .feature-card {
+      padding: 2rem;
+      border-radius: 16px;
+      border: 1px solid rgba(250, 246, 241, 0.08);
+      background: rgba(250, 246, 241, 0.03);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .feature-card:hover {
+      background: rgba(250, 246, 241, 0.06);
+      border-color: rgba(212, 136, 15, 0.3);
+      transform: translateY(-2px);
+    }
+    .feature-emoji {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .feature-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--cream);
+      margin-bottom: 0.5rem;
+    }
+    .feature-desc {
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: rgba(250, 246, 241, 0.55);
+    }
+
+    /* ---- Before/After ---- */
+    .before-after {
+      background: var(--cream);
+    }
+    .ba-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 2rem;
+      align-items: stretch;
+      margin-top: 4rem;
+    }
+    .ba-card {
+      padding: 2.5rem;
+      border-radius: 20px;
+      border: 1px solid rgba(26, 22, 18, 0.08);
+    }
+    .ba-before {
+      background: #f5ece3;
+    }
+    .ba-after {
+      background: var(--sage-light);
+    }
+    .ba-card-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1.5rem;
+    }
+    .ba-before .ba-card-label { color: var(--copper); }
+    .ba-after .ba-card-label { color: var(--sage); }
+    .ba-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      line-height: 1.25;
+    }
+    .ba-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .ba-list li {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--ink-soft);
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+    .ba-list li span {
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      line-height: 1.3;
+    }
+    .ba-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ba-arrow-container {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(212, 136, 15, 0.25);
+    }
+    .ba-arrow-container svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    /* ---- Use Cases ---- */
+    .use-cases {
+      background: var(--warm-white);
+    }
+    .use-cases-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 4rem;
+    }
+    .use-case-card {
+      padding: 2rem;
+      border-radius: 16px;
+      background: var(--cream);
+      border: 1px solid rgba(26, 22, 18, 0.06);
+      transition: all 0.3s ease;
+    }
+    .use-case-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(26, 22, 18, 0.06);
+    }
+    .use-case-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .use-case-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.5rem;
+    }
+    .use-case-desc {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--slate);
+    }
+
+    /* ---- Getting Started ---- */
+    .getting-started {
+      background: var(--cream);
+    }
+    .gs-steps {
+      margin-top: 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-width: 700px;
+    }
+    .gs-step {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+      position: relative;
+      padding-bottom: 2.5rem;
+    }
+    .gs-step:last-child { padding-bottom: 0; }
+    .gs-step::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 44px;
+      bottom: 0;
+      width: 2px;
+      background: rgba(26, 22, 18, 0.08);
+    }
+    .gs-step:last-child::before { display: none; }
+    .gs-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: white;
+      z-index: 1;
+    }
+    .gs-content h3 {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.35rem;
+    }
+    .gs-content p {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--slate);
+    }
+    .gs-code {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--ink);
+      color: var(--amber-light);
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* ---- CTA ---- */
+    .cta-section {
+      padding: 8rem 2rem;
+      text-align: center;
+      background: var(--ink);
+      color: var(--cream);
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(212, 136, 15, 0.1) 0%, transparent 60%);
+      border-radius: 50%;
+    }
+    .cta-section h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    .cta-section p {
+      font-size: 1.1rem;
+      color: rgba(250, 246, 241, 0.6);
+      margin-bottom: 2.5rem;
+      position: relative;
+    }
+    .cta-section .btn-primary {
+      background: var(--amber);
+      color: var(--ink);
+      font-weight: 700;
+      box-shadow: 0 4px 24px rgba(212, 136, 15, 0.3);
+      position: relative;
+    }
+    .cta-section .btn-primary:hover {
+      background: var(--amber-light);
+      box-shadow: 0 8px 40px rgba(212, 136, 15, 0.4);
+    }
+
+    /* ---- Footer ---- */
+    footer {
+      padding: 3rem 2rem;
+      background: var(--ink);
+      border-top: 1px solid rgba(250, 246, 241, 0.06);
+    }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--cream);
+    }
+    .footer-logo span { color: var(--amber); }
+    .footer-text {
+      font-size: 0.85rem;
+      color: rgba(250, 246, 241, 0.35);
+    }
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.85rem;
+      color: rgba(250, 246, 241, 0.45);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--amber); }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      nav {
+        padding: 1rem 1.5rem;
+      }
+      nav.scrolled {
+        padding: 0.7rem 1.5rem;
+      }
+      .nav-links { display: none; }
+      section { padding: 5rem 1.5rem; }
+      .steps-grid, .use-cases-grid {
+        grid-template-columns: 1fr;
+      }
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      .ba-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .ba-divider {
+        transform: rotate(90deg);
+      }
+      .hero {
+        padding: 7rem 1.5rem 4rem;
+      }
+      .hero-visual-card {
+        padding: 1.5rem;
+      }
+      .transformation-flow {
+        flex-direction: column;
+      }
+      .flow-arrow {
+        transform: rotate(90deg);
+      }
+      .footer-inner {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav id="nav">
+    <a href="#" class="nav-logo">Smart<span>Docs</span></a>
+    <ul class="nav-links">
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#use-cases">Use Cases</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#get-started" class="nav-cta">Start Free Trial</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge reveal">Trusted by 2,000+ Teams</div>
+    <h1 class="reveal reveal-delay-1">Turn long videos into<br><em>step-by-step guides</em></h1>
+    <p class="hero-sub reveal reveal-delay-2">
+      Upload a workshop, webinar, or training recording. SmartDocs finds every lesson,
+      creates short clips, and writes illustrated how-to documents &mdash; in minutes, not days.
+    </p>
+    <div class="hero-actions reveal reveal-delay-3">
+      <a href="#get-started" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Try SmartDocs Free
+      </a>
+      <a href="#how-it-works" class="btn btn-secondary">See How It Works</a>
+    </div>
+
+    <div class="hero-visual reveal reveal-delay-4">
+      <div class="hero-visual-card">
+        <div class="transformation-flow">
+          <div class="flow-item">
+            <div class="flow-icon video">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+            </div>
+            <span class="flow-label">1-Hour Video</span>
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-item">
+            <div class="flow-icon magic">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg>
+            </div>
+            <span class="flow-label">SmartDocs AI</span>
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-item">
+            <div class="flow-icon docs">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <span class="flow-label">Clips + SOPs</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="section-label reveal">How It Works</div>
+      <h2 class="section-title reveal reveal-delay-1">Three steps. Zero effort.</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        Give SmartDocs a video, and it handles everything else. No editing skills required.
+      </p>
+
+      <div class="steps-grid">
+        <div class="step-card reveal reveal-delay-1">
+          <div class="step-number">01</div>
+          <div class="step-icon-row">
+            <div class="step-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <h3 class="step-title">Upload Your Video</h3>
+          </div>
+          <p class="step-desc">
+            Drag and drop any video file or paste a YouTube link. SmartDocs accepts workshops, webinars, tutorials, screen recordings &mdash; any format, any length.
+          </p>
+        </div>
+
+        <div class="step-card reveal reveal-delay-2">
+          <div class="step-number">02</div>
+          <div class="step-icon-row">
+            <div class="step-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+            <h3 class="step-title">AI Does the Work</h3>
+          </div>
+          <p class="step-desc">
+            SmartDocs transcribes the audio, identifies every distinct lesson or topic, extracts short clips, captures key screenshots, and writes clear step-by-step instructions.
+          </p>
+        </div>
+
+        <div class="step-card reveal reveal-delay-3">
+          <div class="step-number">03</div>
+          <div class="step-icon-row">
+            <div class="step-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h3 class="step-title">Get Your Guides</h3>
+          </div>
+          <p class="step-desc">
+            Get organized, illustrated SOP documents for each topic. Each guide comes with a short video clip, annotated screenshots, and numbered steps anyone can follow.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-label reveal">Features</div>
+      <h2 class="section-title reveal reveal-delay-1">Built for real-world training content</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        Every detail is designed to turn messy, long-form video into polished, usable knowledge.
+      </p>
+
+      <div class="features-grid">
+        <div class="feature-card reveal reveal-delay-1">
+          <span class="feature-emoji">&#127916;</span>
+          <h3 class="feature-title">Smart Lesson Detection</h3>
+          <p class="feature-desc">AI analyzes the transcript to find natural topic boundaries. A 1-hour recording might become 8 focused, standalone guides.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+          <span class="feature-emoji">&#9986;&#65039;</span>
+          <h3 class="feature-title">Auto Clip Generation</h3>
+          <p class="feature-desc">Each lesson is extracted as a short video clip with silence removed and clean start/end points. Ready to share immediately.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+          <span class="feature-emoji">&#128248;</span>
+          <h3 class="feature-title">Screenshot Extraction</h3>
+          <p class="feature-desc">Key frames are pulled from each clip at the most informative moments, then captioned with AI vision to annotate what's on screen.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-4">
+          <span class="feature-emoji">&#128220;</span>
+          <h3 class="feature-title">SOP Documents</h3>
+          <p class="feature-desc">Each lesson becomes a structured guide with numbered steps, screenshots, and clear instructions. Export as HTML or JSON.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+          <span class="feature-emoji">&#128101;</span>
+          <h3 class="feature-title">Team Sharing &amp; Collaboration</h3>
+          <p class="feature-desc">Share guides with your team instantly. Organize by department, project, or topic. Everyone gets the same clear instructions.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-4">
+          <span class="feature-emoji">&#127760;</span>
+          <h3 class="feature-title">Works with Any Video</h3>
+          <p class="feature-desc">Upload files directly or paste a YouTube URL. SmartDocs handles any format &mdash; Zoom recordings, Loom captures, conference talks, and more.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Before / After -->
+  <section class="before-after" id="before-after">
+    <div class="container">
+      <div class="section-label reveal">The Transformation</div>
+      <h2 class="section-title reveal reveal-delay-1">From one long video to a library of knowledge</h2>
+
+      <div class="ba-grid">
+        <div class="ba-card ba-before reveal reveal-delay-2">
+          <div class="ba-card-label">Before SmartDocs</div>
+          <h3>A 90-minute workshop recording sitting in a folder</h3>
+          <ul class="ba-list">
+            <li><span>&#128556;</span> Nobody rewatches the full thing</li>
+            <li><span>&#128556;</span> Hard to find the part you need</li>
+            <li><span>&#128556;</span> No written reference to follow</li>
+            <li><span>&#128556;</span> Knowledge trapped in video format</li>
+            <li><span>&#128556;</span> Can't skim, search, or bookmark</li>
+          </ul>
+        </div>
+
+        <div class="ba-divider reveal reveal-delay-3">
+          <div class="ba-arrow-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </div>
+        </div>
+
+        <div class="ba-card ba-after reveal reveal-delay-4">
+          <div class="ba-card-label">After SmartDocs</div>
+          <h3>12 focused guides with clips and screenshots</h3>
+          <ul class="ba-list">
+            <li><span>&#9989;</span> Short clips for each topic (2-8 min)</li>
+            <li><span>&#9989;</span> Step-by-step instructions with images</li>
+            <li><span>&#9989;</span> Searchable, skimmable documents</li>
+            <li><span>&#9989;</span> Share individual lessons with your team</li>
+            <li><span>&#9989;</span> Knowledge is organized and accessible</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="use-cases" id="use-cases">
+    <div class="container">
+      <div class="section-label reveal">Who It's For</div>
+      <h2 class="section-title reveal reveal-delay-1">Perfect for teams that create or consume training videos</h2>
+
+      <div class="use-cases-grid">
+        <div class="use-case-card reveal reveal-delay-1">
+          <div class="use-case-icon">&#127891;</div>
+          <h3 class="use-case-title">Corporate Training</h3>
+          <p class="use-case-desc">Turn onboarding sessions and software training recordings into SOPs that new hires can follow at their own pace.</p>
+        </div>
+        <div class="use-case-card reveal reveal-delay-2">
+          <div class="use-case-icon">&#128218;</div>
+          <h3 class="use-case-title">Online Educators</h3>
+          <p class="use-case-desc">Transform long course recordings into bite-sized lessons with written companions for students who prefer reading.</p>
+        </div>
+        <div class="use-case-card reveal reveal-delay-3">
+          <div class="use-case-icon">&#128736;&#65039;</div>
+          <h3 class="use-case-title">IT & Operations</h3>
+          <p class="use-case-desc">Convert screen-recorded procedures into standard operating procedures with annotated screenshots for your runbooks.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started -->
+  <section class="getting-started" id="get-started">
+    <div class="container">
+      <div class="section-label reveal">Getting Started</div>
+      <h2 class="section-title reveal reveal-delay-1">From sign-up to your first guide in under 5 minutes</h2>
+      <p class="section-desc reveal reveal-delay-2">
+        No downloads. No configuration. Just log in and go.
+      </p>
+
+      <div class="gs-steps">
+        <div class="gs-step reveal reveal-delay-1">
+          <div class="gs-dot">1</div>
+          <div class="gs-content">
+            <h3>Create your free account</h3>
+            <p>Sign up with your email or Google account. No credit card required &mdash; your first 3 videos are completely free.</p>
+          </div>
+        </div>
+        <div class="gs-step reveal reveal-delay-2">
+          <div class="gs-dot">2</div>
+          <div class="gs-content">
+            <h3>Upload a video or paste a link</h3>
+            <p>Drag and drop a recording from your computer, or paste a YouTube URL. We accept any video format, any length.</p>
+          </div>
+        </div>
+        <div class="gs-step reveal reveal-delay-3">
+          <div class="gs-dot">3</div>
+          <div class="gs-content">
+            <h3>SmartDocs does the rest</h3>
+            <p>Sit back while AI transcribes, identifies lessons, generates clips, captures screenshots, and writes step-by-step instructions. You'll get a notification when it's ready.</p>
+          </div>
+        </div>
+        <div class="gs-step reveal reveal-delay-4">
+          <div class="gs-dot">4</div>
+          <div class="gs-content">
+            <h3>Download, share, or embed</h3>
+            <p>Get your guides as beautiful HTML pages, PDFs, or JSON. Share them with your team via a link, or embed them in your internal wiki.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2 class="reveal">Stop rewatching. Start reading.</h2>
+    <p class="reveal reveal-delay-1">Your videos have knowledge trapped inside them. Let SmartDocs set it free.</p>
+    <a href="#get-started" class="btn btn-primary reveal reveal-delay-2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+      Start Your Free Trial
+    </a>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">Smart<span>Docs</span></div>
+      <p class="footer-text">Turn any video into actionable knowledge.</p>
+      <ul class="footer-links">
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#get-started">Get Started</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
