@@ -1,6 +1,7 @@
 import express from 'express';
 import { join, resolve } from 'path';
 import { config } from './config.js';
+import projectsRouter from './routes/projects.js';
 
 const clientDir = resolve(import.meta.dirname, '..', 'client');
 
@@ -19,9 +20,8 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Routes will be added here
-  // app.use('/api/projects', projectsRouter);
-  // app.use('/api/jobs', jobsRouter);
+  // API routes
+  app.use('/api/projects', projectsRouter);
 
   // Landing page at root
   const landingPage = resolve(import.meta.dirname, '..', '..', 'home.html');
